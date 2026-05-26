@@ -1,0 +1,316 @@
+/* ── Tipografi ── */
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* ── Glass Panel (açık tema) ── */
+.glass-panel {
+  position: absolute;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  border-radius: 14px;
+  color: #1e293b;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.10);
+}
+
+/* ── Header ── */
+.header-bar {
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 22px;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: slide-down 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.header-title {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #0f172a;
+}
+
+.divider {
+  width: 1px;
+  height: 18px;
+  background: rgba(0, 0, 0, 0.12);
+  flex-shrink: 0;
+}
+
+.muted-text {
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* ── Status Dot ── */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: blink 2s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+
+/* ── Stats Panel ── */
+.stats-panel {
+  bottom: 28px;
+  left: 16px;
+  padding: 16px 18px;
+  min-width: 210px;
+  animation: slide-up 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.panel-section-title {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  margin-bottom: 10px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.stat-item:last-of-type {
+  border-bottom: none;
+}
+
+.stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #2563eb;
+  line-height: 1.1;
+}
+
+.stat-unit {
+  font-size: 12px;
+  font-weight: 400;
+  color: #94a3b8;
+}
+
+/* ── Legend ── */
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #475569;
+  padding: 3px 0;
+}
+
+.legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Flight Detail Panel ── */
+.detail-panel {
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%) translateX(calc(100% + 24px));
+  padding: 20px;
+  width: 270px;
+  transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity   0.38s ease;
+  opacity: 0;
+}
+
+.detail-panel.open {
+  transform: translateY(-50%) translateX(0);
+  opacity: 1;
+}
+
+.detail-callsign {
+  font-size: 20px;
+  font-weight: 800;
+  color: #2563eb;
+  letter-spacing: 0.06em;
+  margin-bottom: 2px;
+  padding-right: 28px;
+}
+
+.detail-country {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.detail-rows {
+  border-top: 1px solid rgba(0, 0, 0, 0.07);
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  gap: 8px;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-key {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.detail-val {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  text-align: right;
+}
+
+/* ── Rota İzi ── */
+.route-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.route-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Altitude Bar ── */
+.alt-bar-bg {
+  width: 100%;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.07);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.alt-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s ease;
+}
+
+/* ── Close Button ── */
+.close-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: #64748b;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: background 0.2s, color 0.2s;
+}
+
+.close-btn:hover {
+  background: rgba(0, 0, 0, 0.12);
+  color: #1e293b;
+}
+
+/* ── Plane Marker ── */
+.plane-marker {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.plane-inner {
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.25));
+  transition: filter 0.2s, transform 0.2s;
+}
+
+.plane-marker:hover .plane-inner {
+  filter: drop-shadow(0 0 6px rgba(37, 99, 235, 0.6));
+  transform: scale(1.18);
+}
+
+/* Seçili uçak — nabız animasyonu */
+.plane-marker.selected .plane-inner {
+  animation: plane-pulse 1.4s ease-in-out infinite;
+  filter: drop-shadow(0 0 7px rgba(37, 99, 235, 0.8));
+}
+
+@keyframes plane-pulse {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.25); }
+}
+
+/* ── Leaflet marker smooth position transition ── */
+/* Uçaklar Python interpolasyon ile her 2s güncellenir → CSS geçişi akıcı hareket sağlar */
+.leaflet-marker-icon {
+  transition: transform 1.8s linear;
+}
+
+/* ── Leaflet genel ayarlar ── */
+.leaflet-container {
+  background: #dde1e7;
+}
+
+.leaflet-control-attribution {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.75) !important;
+  color: #64748b;
+}
+
+.leaflet-control-attribution a {
+  color: #2563eb;
+}
+

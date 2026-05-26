@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+aiokafka
+requests
+websockets
+confluent-kafka
+python-dotenv
