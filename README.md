@@ -7,7 +7,7 @@ Gerçek zamanlı uçuş takip sistemi — OpenSky Network API üzerinden Türkiy
 ## Mimari
 
 ```mermaid
-flowchart TD
+flowchart LR
     subgraph External["Harici Kaynak"]
         OS["OpenSky Network API\n(OAuth2 / REST)"]
     end
@@ -28,8 +28,8 @@ flowchart TD
         end
 
         subgraph Frontend["Frontend Servisi\n(React 19 · Leaflet · Nginx)"]
-            UI["React Uygulaması\nReact-Leaflet harita"]
             NG["Nginx\nStatik sunucu + WS proxy"]
+            UI["React Uygulaması\nReact-Leaflet harita"]
         end
     end
 
