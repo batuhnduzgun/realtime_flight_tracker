@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -23,9 +23,7 @@ const createPlaneIcon = (heading, alt, onGround, isSelected) => {
   return L.divIcon({
     html: `<div class="${cls}" style="transform:rotate(${heading || 0}deg)">
       <div class="plane-inner">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="${color}" xmlns="http://www.w3.org/2000/svg">
-          <path d="M21 16v-2l-8-5V3.5C13 2.67 12.33 2 11.5 2S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
-        </svg>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="${color}" xmlns="http://www.w3.o 
       </div>
     </div>`,
     className: '',
@@ -46,10 +44,13 @@ function App() {
   const [status,  setStatus]    = useState('Bağlanıyor...');
   const [selected, setSelected] = useState(null);
   const [trails,   setTrails]   = useState({});   // icao24 → [[lat,lon], ...]
+  const [searchQuery, setSearchQuery] = useState('');
+  const [altRange,    setAltRange]    = useState([0, 13000]);
+  const [spdRange,    setSpdRange]    = useState([0, 1200]);
+  const [filterOpen,  setFilterOpen]  = useState(false);
   const wsRef           = useRef(null);
   const trailRef        = useRef({});             // mutable, render'ı tetiklemiyor
   const trailTimeRef    = useRef({});             // icao24 → son ekleme zamanı (ms)
-  const trailUpdateRef  = useRef(0);              // her 5 frame'de state güncelle
 
   useEffect(() => {
     let reconnectTimeout;
@@ -60,14 +61,22 @@ function App() {
       const ws = new WebSocket(`${proto}//${window.location.host}/ws`);
       wsRef.current = ws;
 
-      ws.onopen    = () => setStatus('Bağlandı');
+      ws.onopen    = () => {
+        console.log('%c✅ WebSocket bağlantısı kuruldu → ' + ws.url, 'color: #16a34a; font-weight: bold;');
+        setStatus('Bağlandı');
+      };
       ws.onmessage = (e) => {
         try {
           const data = JSON.parse(e.data);
           if (!data?.length) return;
 
+          console.log(`%c✈️  WebSocket mesajı alındı — ${data.length} uçuş`, 'color: #2563eb;');
           setFlights(data);
           setStatus('Bağlandı');
+
+          // Her uçuş için timestamp güncelle (stale cleanup için)
+          const ts = Date.now();
+          data.forEach(f => { if (f[0]) flightTimestamps.current[f[0]] = ts; });
 
           // Rota izi güncelle (10 saniyede bir yeni nokta ekle)
           const now = Date.now();
@@ -86,7 +95,10 @@ function App() {
           });
 
           if (changed) setTrails({ ...trailRef.current });
-        } catch {}
+        } catch (err) {
+          // Geçersiz JSON veya beklenmeyen mesaj formatı — sessizce geç
+          console.warn('WebSocket mesaj ayrıştırma hatası:', err);
+        }
       };
       ws.onerror  = () => setStatus('Bağlantı hatası');
       ws.onclose  = () => {
@@ -100,6 +112,43 @@ function App() {
     connect();
     return () => { isMounted = false; clearTimeout(reconnectTimeout); wsRef.current?.close(); };
   }, []);
+
+  // Stale uçuş temizleme: 60 saniyedir güncelleme gelmemiş uçakları haritadan kaldır
+  const STALE_THRESHOLD_MS = 60_000;
+  const flightTimestamps = useRef({});  // icao24 → son güncelleme zamanı (ms)
+
+  useEffect(() => {
+    const cleanup = setInterval(() => {
+      const now = Date.now();
+      setFlights(prev => {
+        const filtered = prev.filter(f => {
+          const icao = f[0];
+          const lastSeen = flightTimestamps.current[icao] || 0;
+          const isStale = now - lastSeen > STALE_THRESHOLD_MS;
+          if (isStale) console.log(`%c🗑️  Stale uçuş temizlendi: ${icao}`, 'color: #dc2626;');
+          return !isStale;
+        });
+        return filtered;
+      });
+    }, 15_000); // her 15 saniyede bir kontrol et
+
+    return () => clearInterval(cleanup);
+  }, []);
+
+  // Arama ve filtre uygulanmış uçuş listesi — sadece bağımlılıklar değişince yeniden hesaplanır
+  const filteredFlights = useMemo(() => {
+    return flights.filter(f => {
+      if (searchQuery) {
+        const cs = (f[1] || '').trim().toLowerCase();
+        if (!cs.includes(searchQuery.toLowerCase())) return false;
+      }
+      const alt = f[7] || 0;
+      if (alt < altRange[0] || alt > altRange[1]) return false;
+      const spd = f[9] ? Math.round(f[9] * 3.6) : 0;
+      if (spd < spdRange[0] || spd > spdRange[1]) return false;
+      return true;
+    });
+  }, [flights, searchQuery, altRange, spdRange]);
 
   const stats = useMemo(() => {
     if (!flights.length) return { count: 0, airborne: 0, avgSpeed: 0, maxAlt: 0 };
@@ -132,6 +181,58 @@ function App() {
         <div className="divider" />
         <span style={{ fontSize: 22, fontWeight: 700, color: '#2563eb', lineHeight: 1 }}>{stats.count}</span>
         <span className="muted-text">uçuş</span>
+      </div>
+
+      {/* ── Filtre Paneli ── */}
+      <div className="glass-panel filter-panel">
+        <button className="filter-toggle" onClick={() => setFilterOpen(o => !o)}>
+          <span>🔍 Filtrele</span>
+          <span className="filter-count">{filteredFlights.length}/{flights.length}</span>
+          <span style={{ marginLeft: 4, fontSize: 11 }}>{filterOpen ? '▲' : '▼'}</span>
+        </button>
+        {filterOpen && (
+          <div className="filter-body">
+            <div className="filter-group">
+              <label className="filter-label">Çağrı Kodu (Callsign)</label>
+              <input
+                className="filter-input"
+                type="text"
+                placeholder="ör. TK123"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <div className="filter-group">
+              <label className="filter-label">İrtifa: {altRange[0].toLocaleString('tr')} – {altRange[1].toLocaleString('tr')} m</label>
+              <div className="range-row">
+                <input type="range" min={0} max={13000} step={500}
+                  value={altRange[0]}
+                  onChange={e => setAltRange([+e.target.value, altRange[1]])}
+                />
+                <input type="range" min={0} max={13000} step={500}
+                  value={altRange[1]}
+                  onChange={e => setAltRange([altRange[0], +e.target.value])}
+                />
+              </div>
+            </div>
+            <div className="filter-group">
+              <label className="filter-label">Hız: {spdRange[0]} – {spdRange[1]} km/h</label>
+              <div className="range-row">
+                <input type="range" min={0} max={1200} step={50}
+                  value={spdRange[0]}
+                  onChange={e => setSpdRange([+e.target.value, spdRange[1]])}
+                />
+                <input type="range" min={0} max={1200} step={50}
+                  value={spdRange[1]}
+                  onChange={e => setSpdRange([spdRange[0], +e.target.value])}
+                />
+              </div>
+            </div>
+            <button className="filter-reset" onClick={() => { setSearchQuery(''); setAltRange([0, 13000]); setSpdRange([0, 1200]); }}>
+              Filtreleri Sıfırla
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── İstatistik Paneli ── */}
@@ -231,7 +332,7 @@ function App() {
         />
 
         {/* ── Rota İzleri ── */}
-        {flights.map(flight => {
+        {filteredFlights.map(flight => {
           const icao  = flight[0];
           const trail = trails[icao];
           if (!trail || trail.length < 2) return null;
@@ -246,7 +347,7 @@ function App() {
         })}
 
         {/* ── Uçak İkonları ── */}
-        {flights.map((flight, index) => {
+        {filteredFlights.map((flight, index) => {
           const lat = flight[6];
           const lon = flight[5];
           if (lat === null || lon === null) return null;
