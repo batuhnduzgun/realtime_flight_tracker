@@ -8,39 +8,19 @@ Gerçek zamanlı uçuş takip sistemi — OpenSky Network API üzerinden Türkiy
 
 ```mermaid
 flowchart LR
-    subgraph External["Harici Kaynak"]
-        OS["OpenSky Network API\n(OAuth2 / REST)"]
-    end
+    OS(["OpenSky\nNetwork API\nOAuth2 / REST"])
+    P["Producer\nconfluent-kafka\n~15s polling"]
+    K[["Apache Kafka 3.7\nKRaft · topic: flights"]]
+    B["FastAPI / Uvicorn\nAIOKafka Consumer\nInterpolation · WebSocket"]
+    N["Nginx\nReverse Proxy"]
+    F(["React 19\nReact-Leaflet\nHarita UI"])
 
-    subgraph Docker["Docker Compose Ağı (app-network)"]
-        subgraph Producer["Producer Servisi\n(Python · confluent-kafka)"]
-            P["producer.py\nTokenManager + fetch_flight_data()\n~15 sn'de bir veri çeker"]
-        end
-
-        subgraph Kafka["Apache Kafka 3.7.0\n(KRaft modu — ZooKeeper yok)"]
-            T["Topic: flights"]
-        end
-
-        subgraph Backend["Backend Servisi\n(Python · FastAPI · Uvicorn)"]
-            C["AIOKafkaConsumer\nasenkron tüketim"]
-            I["InterpolationBroadcaster\nher 2 sn'de ara konum"]
-            WS["WebSocket /ws\naktif bağlantılara yayın"]
-        end
-
-        subgraph Frontend["Frontend Servisi\n(React 19 · Leaflet · Nginx)"]
-            NG["Nginx\nStatik sunucu + WS proxy"]
-            UI["React Uygulaması\nReact-Leaflet harita"]
-        end
-    end
-
-    OS -- "HTTPS + Bearer Token" --> P
-    P -- "JSON mesaj" --> T
-    T -- "AIOKafkaConsumer" --> C
-    C --> I
-    I --> WS
-    WS -- "WebSocket (ws://)" --> NG
-    NG -- "proxy_pass /ws" --> WS
-    NG --> UI
+    OS -->|HTTPS| P
+    P -->|JSON| K
+    K -->|consume| B
+    B -->|ws: /ws| N
+    N -->|WS proxy| B
+    N -->|HTTP| F
 ```
 
 ### Veri Akışı
