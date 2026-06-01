@@ -8,19 +8,34 @@ Gerçek zamanlı uçuş takip sistemi — OpenSky Network API üzerinden Türkiy
 
 ```mermaid
 flowchart LR
-    OS(["OpenSky\nNetwork API\nOAuth2 / REST"])
-    P["Producer\nconfluent-kafka\n~15s polling"]
-    K[["Apache Kafka 3.7\nKRaft · topic: flights"]]
-    B["FastAPI / Uvicorn\nAIOKafka Consumer\nInterpolation · WebSocket"]
-    N["Nginx\nReverse Proxy"]
-    F(["React 19\nReact-Leaflet\nHarita UI"])
+    subgraph EXT["Harici"]
+        OS["OpenSky Network API\nOAuth2 / REST"]
+    end
 
-    OS -->|HTTPS| P
-    P -->|JSON| K
-    K -->|consume| B
-    B -->|ws: /ws| N
-    N -->|WS proxy| B
-    N -->|HTTP| F
+    subgraph DC["Docker Compose · app-network"]
+        subgraph PRD["Producer"]
+            P["producer.py\nTokenManager\n~15s polling"]
+        end
+        subgraph KFK["Apache Kafka 3.7.0 · KRaft"]
+            T[["topic: flights"]]
+        end
+        subgraph BE["Backend"]
+            C["AIOKafkaConsumer"]
+            I["InterpolationBroadcaster\nher 2s ara konum"]
+            WS["WebSocket /ws"]
+            C --> I --> WS
+        end
+        subgraph FE["Frontend"]
+            NG["Nginx\nStatik + WS Proxy"]
+            UI["React 19\nReact-Leaflet"]
+            NG --> UI
+        end
+    end
+
+    OS -->|HTTPS + Bearer| P
+    P -->|JSON mesaj| T
+    T -->|consume| C
+    WS -->|ws://| NG
 ```
 
 ### Veri Akışı
