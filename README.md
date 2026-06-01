@@ -7,35 +7,39 @@ Gerçek zamanlı uçuş takip sistemi — OpenSky Network API üzerinden Türkiy
 ## Mimari
 
 ```mermaid
-flowchart LR
-    subgraph EXT["Harici"]
-        OS["OpenSky Network API\nOAuth2 / REST"]
+flowchart TD
+    OS["☁️ OpenSky Network API\nOAuth2 / REST"]
+
+    subgraph PRD["🟦 Producer Servisi · Python"]
+        P1["TokenManager\nOAuth2 Client Credentials"]
+        P2["fetch_flight_data\nTürkiye bounding box\n36–42°N · 26–45°E"]
+        P3["confluent-kafka Producer\n~15 saniyede bir publish"]
+        P1 --> P2 --> P3
     end
 
-    subgraph DC["Docker Compose · app-network"]
-        subgraph PRD["Producer"]
-            P["producer.py\nTokenManager\n~15s polling"]
-        end
-        subgraph KFK["Apache Kafka 3.7.0 · KRaft"]
-            T[["topic: flights"]]
-        end
-        subgraph BE["Backend"]
-            C["AIOKafkaConsumer"]
-            I["InterpolationBroadcaster\nher 2s ara konum"]
-            WS["WebSocket /ws"]
-            C --> I --> WS
-        end
-        subgraph FE["Frontend"]
-            NG["Nginx\nStatik + WS Proxy"]
-            UI["React 19\nReact-Leaflet"]
-            NG --> UI
-        end
+    subgraph KFK["⚡ Apache Kafka 3.7.0 · KRaft Modu"]
+        T[["topic: flights\nJSON mesajlar"]]
     end
 
-    OS -->|HTTPS + Bearer| P
-    P -->|JSON mesaj| T
-    T -->|consume| C
-    WS -->|ws://| NG
+    subgraph BE["🟩 Backend Servisi · Python"]
+        B1["FastAPI · Uvicorn\nASGI Web Sunucusu"]
+        B2["AIOKafkaConsumer\nAsenkron Tüketim"]
+        B3["InterpolationBroadcaster\n7 adım × 2s = ~14s akıcı hareket"]
+        B4["WebSocket /ws\nTüm istemcilere yayın"]
+        B1 --> B2 --> B3 --> B4
+    end
+
+    subgraph FE["🟧 Frontend Servisi"]
+        F1["Nginx\nStatik Dosya Sunucusu\nWebSocket Reverse Proxy"]
+        F2["React 19 · Vite\nSPA Uygulaması"]
+        F3["React-Leaflet · Leaflet\nİnteraktif Uçuş Haritası"]
+        F1 --> F2 --> F3
+    end
+
+    OS -->|"HTTPS + Bearer Token"| PRD
+    PRD -->|"JSON mesaj"| KFK
+    KFK -->|"AIOKafkaConsumer"| BE
+    BE -->|"WebSocket ws://host/ws"| FE
 ```
 
 ### Veri Akışı
